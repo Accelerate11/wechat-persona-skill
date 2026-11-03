@@ -3,6 +3,7 @@ import json
 from collections import defaultdict
 from pathlib import Path
 from build import save
+from configuration import configure_console
 
 
 def generate(root):
@@ -30,6 +31,7 @@ def generate(root):
 
 
 if __name__ == '__main__':
+    configure_console()
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--project', type=Path, required=True)

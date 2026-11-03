@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
-from configuration import load_project
+from configuration import load_project, configure_console
 from build import save
 
 
@@ -77,6 +77,7 @@ def import_rows(project, input_path):
 
 
 def main():
+    configure_console()
     parser = argparse.ArgumentParser()
     parser.add_argument('--project', type=Path, required=True)
     parser.add_argument('--input', type=Path, required=True)

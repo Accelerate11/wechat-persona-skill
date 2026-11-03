@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / 'skills/wechat-persona/scripts'))
 from build import save, prepare, style_stats, make_examples, render_persona
 from episodes import generate
 from import_jsonl import import_rows
+from configuration import configure_console
 
 
 def generate_demo(directory):
@@ -69,6 +70,7 @@ def generate_demo(directory):
 
 
 if __name__ == '__main__':
+    configure_console()
     parser = argparse.ArgumentParser()
     parser.add_argument('--directory', type=Path, default=ROOT / '.demo')
     args = parser.parse_args()

@@ -113,6 +113,17 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(names, ['fixture.txt'])
             self.assertTrue(any(f['rule'] == 'api-key-shaped token' for f in findings))
 
+    def test_offline_cli_outputs_utf8_under_non_unicode_windows_locale(self):
+        with tempfile.TemporaryDirectory(prefix='wechat-persona-test-') as folder:
+            project = generate_demo(Path(folder) / 'demo')
+            env = {**os.environ, 'PYTHONIOENCODING': 'cp1252'}
+            proc = subprocess.run([sys.executable, '-B', str(ROOT / 'scripts/chat.py'),
+                '--project', str(project), '--message', 'Coffee', '--offline'],
+                capture_output=True, env=env, check=True)
+            response = json.loads(proc.stdout.decode('utf-8'))
+            self.assertEqual(response['mode'], 'retrieval_only_no_network')
+            self.assertIn('历史参考材料', response['context'])
+
 
 if __name__ == '__main__':
     unittest.main()

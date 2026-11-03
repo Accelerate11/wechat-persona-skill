@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from wechat_source import recover_keys, open_snapshot, normalize_row
-from configuration import load_project
+from configuration import load_project, configure_console
 
 
 def run(project):
@@ -88,6 +88,7 @@ def run(project):
 
 
 if __name__ == "__main__":
+    configure_console()
     parser = argparse.ArgumentParser()
     parser.add_argument("--project", type=Path, required=True)
     args = parser.parse_args()

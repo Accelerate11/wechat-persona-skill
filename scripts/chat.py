@@ -9,7 +9,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'skills/wechat-persona/scripts'))
-from configuration import load_project
+from configuration import load_project, configure_console
 from secret_store import deepseek_key
 
 
@@ -41,6 +41,7 @@ def reply(project, text, history, offline=False):
 
 
 if __name__ == '__main__':
+    configure_console()
     parser = argparse.ArgumentParser()
     parser.add_argument('--project', type=Path, default=ROOT / 'project.json')
     parser.add_argument('--message')

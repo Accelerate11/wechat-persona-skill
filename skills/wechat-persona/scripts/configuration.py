@@ -1,8 +1,16 @@
 """Local project validation; authorization is an explicit user-owned setting."""
 import json
 import re
+import sys
 from pathlib import Path
 from urllib.parse import urlsplit
+
+
+def configure_console():
+    """CLI output is UTF-8 even under non-Unicode Windows runner locales."""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(encoding='utf-8', errors='backslashreplace')
 
 
 def load_project(path, cloud=False, source=False):
