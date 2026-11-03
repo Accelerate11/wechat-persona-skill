@@ -12,10 +12,10 @@ index e536c41..ae97625 100644
  ```
 diff --git a/docs/MEMORY-CONTEXT.md b/docs/MEMORY-CONTEXT.md
 new file mode 100644
-index 0000000..9e81eb8
+index 0000000..dddb326
 --- /dev/null
 +++ b/docs/MEMORY-CONTEXT.md
-@@ -0,0 +1,15 @@
+@@ -0,0 +1,17 @@
 +# 对话记忆与上下文改进
 +
 +基于上游 `aureth-labs/dsh-aurabot-qq` 提交 `b3301f6b014016e141c07d266a716c0fea566aab`，不改变发送权限、网关登录或工具授权。
@@ -23,6 +23,8 @@ index 0000000..9e81eb8
 +聊天中枢把用户原话和完成轮次的机器人回复保存到 `conversation-context/`，按人格标识与聊天标识分别建日志。原始日志是追加记录，checkpoint只保存可检查的元数据；异常日志不会静默清空。assistant原话始终保持来源角色，不能自动作为真人事实。
 +
 +每轮优先使用当前问题；明确新主题时不扩展旧主题，省略说法可使用前几轮用户线索。检索结合BM25与多个线索的排序合并。当前问题的权重高于辅助线索，避免反复提及的旧话题挤掉明确的新问题。旧对话以有来源的JSON片段附在本轮输入末尾，完整片段有长度预算；近期记录只在会话恢复时补入，避免每轮重复粘贴。
++
++片段按完整消息及序列化长度拆分，超长粘贴单独保存，避免它让相邻的小事实也被预算排除。原始追加日志不截断、不改写。
 +
 +扩展的 `prompt` 事件新增 `recentMessages`；`api.core.hub.recentMessagesOf(chatId, limit)` 提供同一人格/聊天的近期原话。关闭 `conversationContext.enabled` 后不再自动记录或注入此类对话材料。此层只补充上下文；DSH宿主仍管理自己的整体模型窗口与压缩，不能把片段预算称为完整请求的token上限。
 +
@@ -33,10 +35,10 @@ index 0000000..9e81eb8
 +设计依据：[Generative Agents](https://arxiv.org/html/2304.03442v2)的经验记录与动态检索、[LongMemEval](https://arxiv.org/html/2410.10813v2)的跨会话/更新/时间/不知道时处理，以及[Lost in the Middle](https://aclanthology.org/2024.tacl-1.9/)对长窗口使用能力的限制。参数是工程选择，实际效果需要回归测试和具体聊天评估。
 diff --git a/src/chat/conversation-context.js b/src/chat/conversation-context.js
 new file mode 100644
-index 0000000..cf9d5f6
+index 0000000..da6351e
 --- /dev/null
 +++ b/src/chat/conversation-context.js
-@@ -0,0 +1,174 @@
+@@ -0,0 +1,181 @@
 +// SPDX-License-Identifier: MIT
 +// Source-grounded conversation recall. Generated replies remain labelled replies,
 +// never promoted to facts about a person. This module makes no model/network calls.
@@ -187,27 +189,34 @@ index 0000000..cf9d5f6
 +    return true
 +  }
 +  function recent(chatId, limit = 32) { return state(chatId).messages.slice(-limit).map(m => ({ ...m })) }
-+  function episodes(chatId) {
-+    const result = []; let block = []
++  function episodes(chatId, { maxCharacters = 2000 } = {}) {
++    const result = []; let block = [], serializedSize = 0
++    // Reserve the episode wrapper and evidence IDs. Split at source-message
++    // boundaries, so a large paste cannot hide its small neighboring facts.
++    const recordBudget = Math.max(1, maxCharacters - 256)
 +    const emit = () => {
 +      if (!block.length) return
 +      result.push({ id: 'conversation-' + block[0].id, at: block[0].at, source: 'new_conversation',
 +        visibility: 'same_conversation', evidence_ids: block.map(m => m.id), context: block.map(m => ({ ...m })),
-+        text: block.map(m => `${m.role}: ${m.text}`).join('\n') }); block = []
++        text: block.map(m => `${m.role}: ${m.text}`).join('\n') }); block = []; serializedSize = 0
 +    }
 +    for (const m of state(chatId).messages) {
-+      if (block.length && (m.at - block.at(-1).at > 30 * 60_000 || (m.role === 'user' && block.length >= 8))) emit()
-+      block.push(m)
++      const size = JSON.stringify(m).length + JSON.stringify(m.id).length + 2
++      if (block.length && (m.at - block.at(-1).at > 30 * 60_000 || (m.role === 'user' && block.length >= 8) || serializedSize + size > recordBudget)) emit()
++      block.push(m); serializedSize += size
++      if (serializedSize >= recordBudget) emit()
 +    }
 +    emit(); return result
 +  }
 +  function recall(chatId, query, { maxCharacters = 4000, recentMessages = recent(chatId), excludeIds = [] } = {}) {
 +    const excluded = new Set([...excludeIds, ...recentMessages.map(m => m.id)])
-+    const docs = episodes(chatId).filter(e => e.context.some(m => !excluded.has(m.id)))
++    const render = e => JSON.stringify({ id: e.id, source: e.source, evidence_ids: e.evidence_ids, context: e.context })
++    const docs = episodes(chatId, { maxCharacters: Math.min(2000, maxCharacters) }).filter(e => e.context.some(m => !excluded.has(m.id)))
 +      .map(e => ({ ...e, context: e.context.filter(m => !excluded.has(m.id)) }))
 +      .map(e => ({ ...e, evidence_ids: e.context.map(m => m.id), text: e.context.map(m => `${m.role}: ${m.text}`).join('\n') }))
++      .filter(e => Array.from(render(e)).length <= maxCharacters)
 +    const hits = retrieve(queriesFor(query, recentMessages), docs, { limit: 6 })
-+    return packEvidence(hits, e => JSON.stringify({ id: e.id, source: e.source, evidence_ids: e.evidence_ids, context: e.context }), maxCharacters)
++    return packEvidence(hits, render, maxCharacters)
 +  }
 +  return { append, recent, recall, episodes }
 +}
@@ -521,10 +530,10 @@ index 2029822..c77784a 100644
          }),
 diff --git a/test/conversation-context.test.js b/test/conversation-context.test.js
 new file mode 100644
-index 0000000..f9a22b1
+index 0000000..9cecb84
 --- /dev/null
 +++ b/test/conversation-context.test.js
-@@ -0,0 +1,97 @@
+@@ -0,0 +1,112 @@
 +import test from 'node:test'
 +import assert from 'node:assert/strict'
 +import { mkdtempSync, writeFileSync } from 'node:fs'
@@ -621,6 +630,21 @@ index 0000000..f9a22b1
 +  const chat = { kind: 'private', userId: 'alice', chatId: 'private:alice' }
 +  assert.match(store.recallHint(chat, '以前喜欢Coffee吗'), /已被后续信息更正/)
 +  assert.doesNotMatch(store.recallHint(chat, '现在喜欢Coffee吗'), /以前喜欢Coffee/)
++})
++
++test('大段粘贴不会让旁边的小事实一起超过检索预算，原始长消息仍完整保存', () => {
++  const directory = mkdtempSync(join(tmpdir(), 'aurabot-paste-'))
++  const archive = createConversationArchive({ directory })
++  const chat = 'private:owner', pasted = '无关资料'.repeat(4000)
++  archive.append(chat, { id: 'paste', role: 'user', text: pasted })
++  archive.append(chat, { id: 'fact', role: 'user', text: 'Coffee温控约定用八十八度' })
++  archive.append(chat, { id: 'reply', role: 'assistant', text: '行' })
++  for (let i = 0; i < 40; i++) archive.append(chat, { id: 'filler-' + i, role: 'user', text: '讨论盆栽浇水第' + i + '次' })
++  const recalled = archive.recall(chat, 'Coffee温控约定', { maxCharacters: 900 })
++  assert.match(recalled.text, /八十八度/)
++  assert.ok(recalled.characters <= 900)
++  assert.ok(recalled.selected.some(e => e.context.some(m => m.id === 'fact' && m.role === 'user')))
++  assert.equal(archive.recent(chat, 100).find(m => m.id === 'paste').text, pasted)
 +})
 diff --git a/test/e2e.test.js b/test/e2e.test.js
 index 91a8d5c..7d855e0 100644

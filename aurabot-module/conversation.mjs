@@ -148,27 +148,34 @@ export function createConversationArchive({ directory, namespace = 'default', no
     return true
   }
   function recent(chatId, limit = 32) { return state(chatId).messages.slice(-limit).map(m => ({ ...m })) }
-  function episodes(chatId) {
-    const result = []; let block = []
+  function episodes(chatId, { maxCharacters = 2000 } = {}) {
+    const result = []; let block = [], serializedSize = 0
+    // Reserve the episode wrapper and evidence IDs. Split at source-message
+    // boundaries, so a large paste cannot hide its small neighboring facts.
+    const recordBudget = Math.max(1, maxCharacters - 256)
     const emit = () => {
       if (!block.length) return
       result.push({ id: 'conversation-' + block[0].id, at: block[0].at, source: 'new_conversation',
         visibility: 'same_conversation', evidence_ids: block.map(m => m.id), context: block.map(m => ({ ...m })),
-        text: block.map(m => `${m.role}: ${m.text}`).join('\n') }); block = []
+        text: block.map(m => `${m.role}: ${m.text}`).join('\n') }); block = []; serializedSize = 0
     }
     for (const m of state(chatId).messages) {
-      if (block.length && (m.at - block.at(-1).at > 30 * 60_000 || (m.role === 'user' && block.length >= 8))) emit()
-      block.push(m)
+      const size = JSON.stringify(m).length + JSON.stringify(m.id).length + 2
+      if (block.length && (m.at - block.at(-1).at > 30 * 60_000 || (m.role === 'user' && block.length >= 8) || serializedSize + size > recordBudget)) emit()
+      block.push(m); serializedSize += size
+      if (serializedSize >= recordBudget) emit()
     }
     emit(); return result
   }
   function recall(chatId, query, { maxCharacters = 4000, recentMessages = recent(chatId), excludeIds = [] } = {}) {
     const excluded = new Set([...excludeIds, ...recentMessages.map(m => m.id)])
-    const docs = episodes(chatId).filter(e => e.context.some(m => !excluded.has(m.id)))
+    const render = e => JSON.stringify({ id: e.id, source: e.source, evidence_ids: e.evidence_ids, context: e.context })
+    const docs = episodes(chatId, { maxCharacters: Math.min(2000, maxCharacters) }).filter(e => e.context.some(m => !excluded.has(m.id)))
       .map(e => ({ ...e, context: e.context.filter(m => !excluded.has(m.id)) }))
       .map(e => ({ ...e, evidence_ids: e.context.map(m => m.id), text: e.context.map(m => `${m.role}: ${m.text}`).join('\n') }))
+      .filter(e => Array.from(render(e)).length <= maxCharacters)
     const hits = retrieve(queriesFor(query, recentMessages), docs, { limit: 6 })
-    return packEvidence(hits, e => JSON.stringify({ id: e.id, source: e.source, evidence_ids: e.evidence_ids, context: e.context }), maxCharacters)
+    return packEvidence(hits, render, maxCharacters)
   }
   return { append, recent, recall, episodes }
 }

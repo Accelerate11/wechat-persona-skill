@@ -56,6 +56,18 @@ class PsychologyTests(unittest.TestCase):
             self.assertEqual(denied['text'], '')
             self.assertEqual(denied['system'], '')
 
+    def test_pasted_document_does_not_hide_an_adjacent_memory_after_restart(self):
+        with tempfile.TemporaryDirectory(prefix='persona-paste-') as folder:
+            project = generate_demo(Path(folder) / 'demo')
+            messages = [{'id': 'paste', 'role': 'user', 'text': '无关资料' * 4000},
+                        {'id': 'fact', 'role': 'user', 'text': 'Coffee温控约定用八十八度'},
+                        {'id': 'ack', 'role': 'assistant', 'text': '行'}]
+            messages += [{'id': f'filler-{i}', 'role': 'user', 'text': f'盆栽浇水第{i}次'} for i in range(140)]
+            adapter(project, {'action': 'record', 'messages': messages})
+            response = adapter(project, {'query': 'Coffee温控约定'})
+            self.assertIn('八十八度', response['text'])
+            self.assertTrue(response['conversation_ids'])
+
 
 if __name__ == '__main__':
     unittest.main()
