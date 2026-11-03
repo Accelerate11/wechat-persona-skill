@@ -182,6 +182,7 @@ export default {
     api.route('/status', () => ({ ok: true, name: bundle.profile.display_name,
       rules: bundle.profile.rules.length, memories: bundle.memories.length, examples: bundle.examples.length,
       sourceEpisodes: bundle.episodes.length,
+      conversationArchive: hasCoreArchive ? 'aurabot_core' : 'extension',
       sourceCutoff: bundle.profile.source_cutoff, liveGatewayActions: false }))
     api.log.info(`${bundle.profile.display_name}已加载：${bundle.profile.rules.length}条表达规律、${bundle.memories.length}条历史记忆`)
     return { profile: () => ({ id: bundle.profile.id, name: bundle.profile.display_name }),
