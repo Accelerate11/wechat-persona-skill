@@ -1,0 +1,22 @@
+WeChat Persona Skill
+Copyright 2026 WeChat Persona Skill contributors
+
+The read-only WCDB/SQLCipher acquisition implementation in
+skills/wechat-persona/scripts/wechat_source.py adapts the page layout,
+Config.Cipher discovery approach, and sender namespace handling documented in:
+  wechatauto-replica, by fanyuantaier and contributors
+  https://github.com/fanyuantaier/wechatauto-replica
+  Licensed under the Apache License, Version 2.0.
+
+Adaptations include in-memory database deserialization, authenticated WAL
+commit handling, selected-contact export, and removal of persistent key caches
+and full plaintext database files. This project is not an upstream release.
+
+Aurabot is an optional external integration, not bundled here:
+  Copyright (c) 2026 Aurabot contributors
+  https://github.com/aureth-labs/dsh-aurabot-qq
+  MIT License; see third_party/Aurabot-MIT.txt.
+
+This project is not affiliated with or endorsed by WeChat, Tencent,
+DeepSeek, Aurabot, or their maintainers. No chat history or person-specific
+persona bundle is included. Demo data is fictional.

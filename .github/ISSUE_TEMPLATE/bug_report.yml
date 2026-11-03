@@ -1,0 +1,26 @@
+name: Bug report / 问题反馈
+description: Report a reproducible problem using fictional data.
+body:
+  - type: markdown
+    attributes:
+      value: 请使用虚构数据复现。不要上传聊天原文、数据库、读取密钥、API Key、QQ/微信账号或个人路径。
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python/Node versions, and optional client version. No account information.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction
+      description: Steps and fictional input that reproduce the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true

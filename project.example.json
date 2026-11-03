@@ -1,0 +1,19 @@
+{
+  "name": "自定义模拟角色",
+  "persona_id": "my-persona",
+  "source_account": "",
+  "source_root": "",
+  "target_username": "",
+  "target_remark": "",
+  "bot_qq": "",
+  "owner_qq": "",
+  "include_group_target_messages": false,
+  "api_base": "https://api.deepseek.com",
+  "api_key_env": "DEEPSEEK_API_KEY",
+  "use_dsh_credentials": false,
+  "model": "deepseek-flash",
+  "dsh_model_provider": "deepseek-official",
+  "dsh_profile": "desktop",
+  "external_analysis_authorized": false,
+  "live_qq_enabled": false
+}

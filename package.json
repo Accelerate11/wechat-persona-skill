@@ -1,0 +1,14 @@
+{
+  "name": "wechat-persona-skill",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Evidence-backed chat personas, portable agent skill, and Aurabot integration",
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": { "node": ">=22.13.0" },
+  "scripts": {
+    "test": "node --test tests/runtime.test.mjs",
+    "check:public": "python scripts/check_public.py",
+    "demo": "python scripts/demo.py"
+  }
+}

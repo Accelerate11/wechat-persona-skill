@@ -1,0 +1,1 @@
+-r skills/wechat-persona/requirements.txt
