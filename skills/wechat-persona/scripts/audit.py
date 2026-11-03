@@ -77,6 +77,8 @@ def run(project):
     report.update({'memory_candidates': len(memories), 'memory_count': len(retained), 'rule_count': len(kept_rules),
                    'memory_grounding_audited': True, 'rejected_memory_count': len(memories) - len(retained)})
     save(report_path, report)
+    from psychology import run as compile_behavior
+    compile_behavior(project)
     print(json.dumps({'phase': 'grounding_audit_complete', 'retained_memories': len(retained), 'retained_rules': len(kept_rules), 'rejected_memories': len(memories) - len(retained)}), flush=True)
 
 

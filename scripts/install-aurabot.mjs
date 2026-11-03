@@ -36,6 +36,7 @@ const modulePath = join(base, 'modules', 'wechat-persona')
 const personaPath = join(base, 'personas', 'persona-' + personaId + '.md')
 const prior = existsSync(configPath) ? JSON.parse(readFileSync(configPath, 'utf8')) : {}
 const files = ['profile.json', 'memories.json', 'examples.json', 'episodes.json', 'persona.md']
+if (existsSync(join(output, 'behavior-model.json'))) files.push('behavior-model.json')
 for (const file of files) if (!existsSync(join(output, file))) throw new Error('Missing bundle artifact: ' + file)
 
 const config = structuredClone(DEFAULTS)
@@ -54,6 +55,10 @@ for (const key of ['files', 'voice', 'stickers', 'memory', 'mood', 'diary', 'qzo
 config.memory.dailyConsolidate = false
 config.bridge = { ...config.bridge, enabled: false, dshTools: false }
 config.modules = { ...config.modules, 'wechat-persona': { enabled: true } }
+for (const id of project.replaced_module_ids || []) {
+  if (!/^[a-z][a-z0-9-]{1,39}$/.test(id) || id === 'wechat-persona') throw new Error('Invalid replaced module identity')
+  config.modules[id] = { ...config.modules[id], enabled: false }
+}
 for (const id of readdirSync(join(pluginRoot, 'src', 'modules'), { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name)) {
   config.modules[id] = { ...config.modules[id], enabled: false }
 }
@@ -96,6 +101,7 @@ if (!values.apply) {
   mkdirSync(stage)
   for (const file of files) copyFileSync(join(output, file), join(stage, file))
   copyFileSync(join(root, 'aurabot-module', 'index.mjs'), join(stage, 'index.mjs'))
+  copyFileSync(join(root, 'aurabot-module', 'conversation.mjs'), join(stage, 'conversation.mjs'))
   if (existsSync(modulePath)) {
     mkdirSync(dirname(backup), { recursive: true })
     renameSync(modulePath, backup)

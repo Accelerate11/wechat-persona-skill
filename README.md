@@ -98,6 +98,7 @@ python skills/wechat-persona/scripts/extract.py --project project.json
 python skills/wechat-persona/scripts/build.py --project project.json
 python skills/wechat-persona/scripts/audit.py --project project.json
 python skills/wechat-persona/scripts/episodes.py --project project.json
+python skills/wechat-persona/scripts/psychology.py --project project.json
 python scripts/chat.py --project project.json
 ```
 
@@ -111,6 +112,10 @@ python scripts/chat.py --project project.json
 | `build-report.json` | 提取范围、统计与验证集隔离信息 |
 
 `data/evidence.json`用于按证据ID回查来源。`data/`、`output/`及用户配置包含私人资料，均不应公开。
+
+`behavior-model.json`进一步保留私聊/群聊及可观察情境下的表达分布、规律支持的会话数和目标本人事件时间线；单会话观察不会写成稳定人格。它不生成心理量表分数。设计依据与证据边界见 [研究笔记](docs/research.md)。
+
+本地试聊按完整轮次保留近期上下文，并将新对话原话保存在被忽略的 `data/conversation-memory/`；关闭后重开仍可检索早期片段。“那后来呢”可借用前几轮线索。新对话与微信历史、不同人格与聊天分别隔离；机器人曾说过的话保持assistant标记，不能自动作为真人经历。检索证据和近期对话分别有长度预算，预算不足时舍弃完整记录。
 
 ## 接入Aurabot
 
@@ -132,6 +137,8 @@ node scripts/install-aurabot.mjs --project project.json --apply
 
 在Aurabot面板确认身份和试运行结果，再按自己的授权范围启用聊天。**模型服务授权不等于QQ发送授权。**
 
+希望同时增强Aurabot本体的对话记忆时，参见 [核心补丁说明](docs/aurabot-core.md)。人物扩展可以单独使用；本体补丁有明确的上游版本要求，需要重新加载核心。
+
 ## 作为skill使用
 
 [skills/wechat-persona/SKILL.md](skills/wechat-persona/SKILL.md)包含工作流与约束。提取脚本可独立随技能使用；JSONL便捷入口、本地试聊和Aurabot安装使用本仓库源码。保留已有同名私人skill，避免未经备份覆盖。
@@ -147,6 +154,8 @@ python scripts/check_public.py
 最后一条检查Git已跟踪/暂存文件；它拒绝运行数据、数据库、非演示账号和常见凭证格式，并只报告位置，不回显密钥。它是辅助检查，不能发现所有隐私。提交前仍应执行 `git diff --cached` 人工检查。
 
 CI配置包含Windows/Linux、Python 3.12/3.13、Node.js 24；远程CI结果需在推送后确认。测试与演示不需要API密钥或真实微信数据。
+
+可用 `python scripts/evaluate.py --project project.json --cases 6 --baseline-ref v0.1.0` 检查预留会话的检索隔离（需本地存在对应旧版tag，也可指定旧提交）；加 `--generate` 才会调用已获授权的模型，生成旧版/新版续写并进行标签置换后的自动评审。报告保存在私人 `data/` 下，不写入真实聊天记忆。自动评审样本少且有偏差，不能替代熟悉原型的人的盲评。
 
 参见 [PRIVACY.md](PRIVACY.md)、[SECURITY.md](SECURITY.md) 和 [CONTRIBUTING.md](CONTRIBUTING.md)。
 

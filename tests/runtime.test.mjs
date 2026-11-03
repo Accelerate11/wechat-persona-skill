@@ -40,3 +40,20 @@ test('单条记忆可命中，空身份不会获得私人资料', () => {
   assert.equal(allowed({ kind: 'private', userId: '' }, ''), false)
   assert.equal(allowed({ kind: 'private', userId: '123' }, undefined), false)
 })
+
+test('后续省略问题借助真实多轮线索，新主题不会被旧主题顶替', () => {
+  const chat = { kind: 'private', userId: '123' }
+  const history = [{ role: 'user', text: 'Coffee温控' }, { role: 'assistant', text: '先说水温' }, { role: 'user', text: '嗯' }]
+  assert.equal(contextFor(bundle, chat, '那后来呢', [], { recentMessages: history }).memories[0].id, 'a')
+  const newTopic = contextFor(bundle, chat, '盆栽浇水', [], { recentMessages: history })
+  assert.equal(newTopic.memories[0].id, 'b')
+  assert.ok(!newTopic.memories.some(m => m.id === 'a'))
+})
+
+test('大条目不挤破上下文预算，保留的来源记录仍是完整JSON', () => {
+  const large = { ...bundle, memories: Array.from({ length: 20 }, (_, i) => ({ id: 'fact-' + i,
+    text: 'Coffee温控' + '说明'.repeat(2000), visibility: 'owner_private', evidence_ids: ['source-' + i] })) }
+  const result = contextFor(large, { kind: 'private', userId: '123' }, 'Coffee', [], { maxCharacters: 600 })
+  assert.ok(Array.from(result.text).length <= 600)
+  assert.equal(result.memories.length, 0)
+})

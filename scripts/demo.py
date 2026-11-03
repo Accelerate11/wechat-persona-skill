@@ -11,6 +11,7 @@ from build import save, prepare, style_stats, make_examples, render_persona
 from episodes import generate
 from import_jsonl import import_rows
 from configuration import configure_console
+from psychology import run as compile_behavior
 
 
 def generate_demo(directory):
@@ -66,6 +67,7 @@ def generate_demo(directory):
         'text_training_rows': len(training), 'text_holdout_rows': len(holdout), 'api_requests': 0})
     (output / 'persona.md').write_text(render_persona(profile), 'utf-8')
     generate(directory)
+    compile_behavior(project)
     return project
 
 
