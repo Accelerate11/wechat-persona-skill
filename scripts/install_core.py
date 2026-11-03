@@ -32,7 +32,9 @@ def inside(root, relative):
             raise ValueError('Linked installation paths are not supported')
         if ancestor == root:
             break
-    if not path.resolve().is_relative_to(root):
+    # Windows TEMP may use an 8.3 alias while resolve() expands the child to a
+    # long path. Compare canonical paths on both sides without weakening links.
+    if not path.resolve().is_relative_to(root.resolve()):
         raise ValueError('Core path escaped installation directory')
     return path
 
