@@ -1,15 +1,3 @@
-diff --git a/README.md b/README.md
-index e536c41..ae97625 100644
---- a/README.md
-+++ b/README.md
-@@ -1,5 +1,7 @@
- # Aurabot · 住在 QQ 里的大肥鱼
- 
-+本分支增强了按人格/聊天隔离的持久对话原话、跨轮指代与历史召回，并保留被更正事实的旧版本。设计、验证与迁移边界见 [记忆与上下文说明](docs/MEMORY-CONTEXT.md)。
-+
- DeepSeek Harness（DSH）插件。DSH 里的 AI 以独立 QQ 号「大肥鱼」的身份住进 QQ：有人格、心情和记忆，能看图、发语音、听语音、发和收表情包、用自己的声音翻唱、写 QQ 空间日记、逛空间回评论、刷 B 站发评论、刷小黑盒看帖发帖，还会主动找你聊天。
- 
- ```
 diff --git a/docs/MEMORY-CONTEXT.md b/docs/MEMORY-CONTEXT.md
 new file mode 100644
 index 0000000..dddb326

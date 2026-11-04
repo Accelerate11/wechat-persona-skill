@@ -1,45 +1,50 @@
 # WeChat Persona Skill
 
-从本人或获授权的聊天记录中提取**有来源的记忆、说话习惯与情境行为规律**，生成可试聊的人物模拟资料，并可接入 [Aurabot](https://github.com/aureth-labs/dsh-aurabot-qq)。
+**从获授权的聊天记录构建人物模拟角色：有来源的记忆、按情境变化的表达，以及能够延续的新对话。**
 
-仓库只包含通用代码、skill、测试和虚构示例，不包含真实人物资料、聊天记录、账号或密钥。
+[![CI](https://github.com/Accelerate11/wechat-persona-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/Accelerate11/wechat-persona-skill/actions/workflows/ci.yml)
 
-```mermaid
-flowchart LR
-  A[结构化 JSONL / Windows 微信4] --> B[范围筛选与发送者核对]
-  B --> C[按完整会话划分训练与验证集]
-  C --> D[脱敏后提取与证据复核]
-  D --> E[人物卡 / 记忆 / 原话索引]
-  E --> F[本地试聊]
-  E --> G[Aurabot 扩展模块]
-```
+本项目将聊天记录整理为人物卡、表达规律、记忆和原话索引。角色以第一人称自然聊天，历史事实保留来源、时间与说话者；上线后的对话另行保存，后续可以重新检索。
 
-## 能做什么
+可以先在本地试聊，再接入 [Aurabot](https://github.com/aureth-labs/dsh-aurabot-qq)。需要同时增强 QQ 聊天中枢时，可使用配套的 [Aurabot 记忆增强分支](https://github.com/Accelerate11/dsh-aurabot-qq-memory/tree/persona-memory)。
 
-- 通过规范化JSONL导入跨平台使用；Windows可选读取当前用户已登录的微信4本地库。
-- 将双方私聊与目标人物的群发言分开，按消息所在分片核对发送者。
-- 在内存中解密、验证数据库页面及WAL已提交帧，不保存完整明文库或读取密钥。
-- 分批提取并核对证据，保留来源ID、获知时间、计划/事件区别与可见范围；支持断点恢复。
-- 使用同一套检索与角色规则进行本地试聊和Aurabot接入；私人资料只进入配置用户的私聊。
-- 新对话中的 `/人设记住 事实` 独立存储，不改写原型历史。
+仓库提供通用代码、skill 和虚构示例。真实人物资料、聊天记录、账号配置与密钥保留在使用者本地。
 
-人物模拟不能代表真人当前的想法或行动。自动证据核对会有误判，需要人工审阅；预留验证集也不等于已证明人物相似度。当前不转写语音、不推测图片内容、不训练或发布模型权重。
+## 已实现的能力
 
-## 环境
+| 能力 | 实现方式 |
+| --- | --- |
+| 语料导入 | 支持规范化 JSONL；Windows 可选只读提取当前已登录微信 4 的指定联系人语料 |
+| 发送者与范围核对 | 私聊保留双方上下文；群聊仅保留获准的目标本人发言 |
+| 有来源的记忆 | 附证据 ID、获知时间、主体和可见范围，区分计划、转述与已发生事件 |
+| 情境人格 | 记录“在什么情况下如何回应”，统计表达分布和支持会话数，保留反例与未知 |
+| 第一人称角色 | 将有依据的本人历史融入角色视角，避免机械复读口头禅或补写未提供的经历 |
+| 持久对话 | 新对话按人格与聊天隔离保存原话，重新启动后仍可检索较早内容 |
+| 多轮上下文 | “那后来呢”等省略说法可借助前几轮线索；明确新话题优先 |
+| 检索预算 | 按完整消息拆分片段，超长粘贴不会让相邻的小事实一并漏检 |
+| 可检查的评估 | 完整会话验证集隔离，支持旧版/新版续写对照和自动盲评 |
+| QQ 接入 | 独立人物扩展；安装默认先关闭发送和内置动作，提供配置备份 |
 
-- Python 3.12+、Node.js 22.13+（本地验证使用Node.js 24）。
-- JSONL导入、离线演示和测试可在Windows/Linux运行。
-- 直接读取微信进程只支持Windows；其布局曾在微信4.1.15.56中验证，不保证其他版本兼容。失败时停止，不放宽校验。
-- 模型阶段使用DeepSeek/OpenAI格式兼容的Chat Completions接口；需要服务支持JSON对象输出及当前请求参数。其他服务的参数可能需要适配。
-- QQ接入是可选步骤，需要用户自行安装DSH、Aurabot和OneBot v11网关，并自行完成登录。
+这是人物模拟与记忆系统，不训练或发布模型权重。心理学研究用于指导设计，不能证明已恢复一个人的完整人格。角色直接被问真实身份时应如实说明模拟身份。
 
-## 先跑无网络演示
+## 先运行离线演示
+
+需要 **Python 3.12+** 和 **Node.js 22.13+**。当前 CI 使用 Windows/Linux、Python 3.12/3.13 和 Node.js 24。
 
 ```sh
+git clone https://github.com/Accelerate11/wechat-persona-skill.git
+cd wechat-persona-skill
 python -m venv .venv
 ```
 
-激活环境：Windows PowerShell运行 `.\.venv\Scripts\Activate.ps1`；Linux/macOS运行 `source .venv/bin/activate`。随后：
+激活虚拟环境：
+
+| 终端 | 命令 |
+| --- | --- |
+| Windows PowerShell | `.\.venv\Scripts\Activate.ps1` |
+| Linux/macOS | `source .venv/bin/activate` |
+
+随后运行：
 
 ```sh
 python -m pip install -r requirements.txt
@@ -47,52 +52,58 @@ python scripts/demo.py
 python scripts/chat.py --project .demo/project.json --message Coffee --offline
 ```
 
-演示仅在被Git忽略的 `.demo/` 中生成虚构人物和来源片段；不读微信、不使用API、不接入QQ。最后一条命令展示检索材料，不假装是模型生成的聊天回复。
+演示只在被 Git 忽略的 `.demo/` 中生成虚构人物与语料，不读取微信、不调用模型、不连接 QQ。最后一条命令显示检索结果，便于先检查数据流。
 
-## 使用自己的数据
+## 使用自己的聊天记录
 
-复制 `project.example.json` 为被忽略的 `project.json`，填写以下内容：
+### 1. 创建项目配置
 
-| 字段 | 含义 |
+将 `project.example.json` 复制为 `project.json`，按实际数据填写：
+
+| 配置 | 用途 |
 | --- | --- |
-| `name` / `persona_id` | 模拟角色名与小写文件标识 |
+| `name`、`persona_id` | 角色名与独立人物标识 |
 | `source_account` | 当前用户在源数据中的内部账号 |
-| `target_username` / `target_remark` | 原型的内部账号与用于核对的备注 |
-| `source_root` | 直接读取时的 `db_storage` 路径；JSONL入口可留空 |
-| `include_group_target_messages` | 是否纳入目标本人群发言，默认关闭 |
-| `owner_qq` / `bot_qq` | 接入QQ或本地权限预览使用的身份；线上安装要求有效且不同的QQ号 |
-| `api_base` / `model` | 模型服务地址和模型名 |
-| `external_analysis_authorized` | 是否允许向所选服务发送范围内的文本，默认关闭 |
+| `target_username`、`target_remark` | 原型人物的内部账号与核对备注 |
+| `source_root` | 微信直接提取时的 `db_storage` 路径；JSONL 导入可留空 |
+| `include_group_target_messages` | 是否包含目标本人群发言，默认关闭 |
+| `owner_qq`、`bot_qq` | 使用者与机器人身份；QQ 安装时须为有效且不同的账号 |
+| `api_base`、`model` | 模型服务地址与模型名 |
+| `external_analysis_authorized` | 是否允许向选定模型服务发送文本，默认关闭 |
 
-### 入口A：已有JSONL
+`project.json`、`data/` 和 `output/` 均用于私人运行数据，不应提交到 Git。
 
-每行一个对象，必需字段为 `conversation`、`sender`、`timestamp`（Unix秒）和 `text`；`id`、`type`、`sort_seq`、`server_id`可选。`type`默认1表示文本。私聊的 `conversation` 是目标账号，群聊以 `@chatroom` 结尾。示例均为虚构：
+### 2. 选择语料入口
 
-```json
-{"id":"demo-1","conversation":"wxid_demo_target","sender":"wxid_demo_target","timestamp":1700000000,"type":1,"text":"我喜欢手冲Coffee"}
-```
-
-完整小样见 [examples/messages.example.jsonl](examples/messages.example.jsonl)。发送者布尔标记由导入器重新计算，不信任输入中的 `is_target`。未获准群消息及其他私聊会被排除。
+**已有 JSONL：**
 
 ```sh
 python scripts/import_jsonl.py --project project.json --input path/to/export.jsonl
 ```
 
-### 入口B：Windows微信4本地库
+每行包含 `conversation`、`sender`、Unix 秒时间戳 `timestamp` 和 `text`；可选 `id`、`type`、`sort_seq`、`server_id`。`type` 默认为文本类型 `1`。私聊的 `conversation` 使用目标内部账号，群聊以 `@chatroom` 结尾。虚构示例：
 
-保持本人微信已登录，显式配置账号与 `source_root` 后运行：
+```json
+{"id":"demo-1","conversation":"wxid_demo_target","sender":"wxid_demo_target","timestamp":1700000000,"text":"我喜欢手冲Coffee"}
+```
+
+完整样例见 [messages.example.jsonl](examples/messages.example.jsonl)。导入器重新核对发送者，不信任输入的 `is_target` 标记，并排除未获准的聊天范围。
+
+**Windows 微信 4 本地库：**
+
+保持本人微信已登录，配置账号与 `source_root` 后执行：
 
 ```sh
 python skills/wechat-persona/scripts/extract.py --project project.json
 ```
 
-它只读打开源文件和微信进程，以所选库的页面HMAC验证读取材料，并核对备注与内部账号。它不是账号登录、密码恢复或跨设备取证工具。
+提取器只读访问指定数据库和已登录进程，在内存中解密并验证页面与 WAL 提交边界，不落盘保存完整明文库或数据库密钥。布局曾在微信 4.1.15.56 验证；其他版本不保证兼容。
 
-### 提取、核对和建立索引
+### 3. 提取、审计与试聊
 
-先在终端设置 `DEEPSEEK_API_KEY`，不要写进项目配置或命令示例。Windows可设置 `$env:DEEPSEEK_API_KEY`，其他平台使用 `export`。`.env.example`仅作字段说明，程序不自动读取`.env`。
+模型阶段需要支持 Chat Completions、JSON 对象输出及当前请求参数的服务；其他兼容服务可能需要适配参数。
 
-了解发送范围与服务条款后，**自行**将 `external_analysis_authorized` 改为 `true`。如需复用已有DSH配置，还须显式设置 `use_dsh_credentials: true`；默认不会读取其密钥。
+在当前终端设置 `DEEPSEEK_API_KEY`。确认发送范围后，由使用者将 `external_analysis_authorized` 设为 `true`。复用已有 DSH 密钥另需显式开启 `use_dsh_credentials`；默认不会读取它，也不会自动加载 `.env`。
 
 ```sh
 python skills/wechat-persona/scripts/build.py --project project.json
@@ -102,48 +113,70 @@ python skills/wechat-persona/scripts/psychology.py --project project.json
 python scripts/chat.py --project project.json
 ```
 
-主要产物位于配置文件同目录的 `output/`：
+提取与证据审计支持缓存恢复。`audit.py` 也会生成行为模型；`psychology.py` 可在审计后独立重建该模型，不调用网络。
 
-| 文件 | 内容 |
+| 主要产物 | 内容 |
 | --- | --- |
-| `persona.md` / `profile.json` | 可读人物卡与结构化规律 |
-| `memories.json` | 通过自动证据核对的候选记忆 |
-| `examples.json` / `episodes.json` | 表达示例与可检索原话片段 |
-| `build-report.json` | 提取范围、统计与验证集隔离信息 |
+| `output/persona.md`、`profile.json` | 人物卡与结构化表达规律 |
+| `output/memories.json` | 通过自动证据核对的候选记忆 |
+| `output/examples.json`、`episodes.json` | 表达示例与原话检索片段 |
+| `output/behavior-model.json` | 表达分布、条件规律支持数与本人事件时间线 |
+| `output/build-report.json` | 构建范围、统计和验证集信息 |
+| `data/evidence.json` | 按证据 ID 回查来源 |
+| `data/conversation-memory/` | 本地试聊的新对话原话日志 |
 
-`data/evidence.json`用于按证据ID回查来源。`data/`、`output/`及用户配置包含私人资料，均不应公开。
+## 记忆与人物视角
 
-`behavior-model.json`进一步保留私聊/群聊及可观察情境下的表达分布、规律支持的会话数和目标本人事件时间线；单会话观察不会写成稳定人格。它不生成心理量表分数。设计依据与证据边界见 [研究笔记](docs/research.md)。
+```mermaid
+flowchart LR
+    A[获授权的历史聊天] --> B[完整会话划分]
+    B --> C[训练集提取与审计]
+    B --> H[独立验证集]
+    C --> D[人物卡与情境规律]
+    C --> E[历史记忆与原话索引]
+    N[上线后的文本对话] --> J[按人物和聊天保存原话]
+    D --> R[第一人称回应]
+    E --> Q[结合当前问题和多轮线索检索]
+    J --> Q
+    Q --> R
+```
 
-本地试聊按完整轮次保留近期上下文，并将新对话原话保存在被忽略的 `data/conversation-memory/`；关闭后重开仍可检索早期片段。“那后来呢”可借用前几轮线索。新对话与微信历史、不同人格与聊天分别隔离；机器人曾说过的话保持assistant标记，不能自动作为真人经历。检索证据和近期对话分别有长度预算，预算不足时舍弃完整记录。
+- **历史与新对话分开。** 机器人曾说过的话保留 `assistant` 来源，不自动成为原型或用户经历的证据。
+- **规律带情境与支持数。** 单会话观察降级，不把一次玩笑、短暂情绪或消息长度直接换成人格分数。
+- **原话可回查。** 总结和行为概括保留证据引用，未检索到的经历保持未知。
+- **上下文有预算。** 保留完整近期轮次，按问题取回较早片段；片段预算不等于整个模型请求的 token 上限。
 
-## 接入Aurabot
+研究来源、阅读范围和工程推断见 [研究笔记](docs/research.md)。
 
-按[Aurabot官方说明](https://github.com/aureth-labs/dsh-aurabot-qq)安装DSH插件与网关，亲自完成QQ扫码及协议确认。此仓库不分发网关、不代替接受协议，也不自动上线。
+## 接入 QQ
 
-在配置中填写两个不同的真实QQ号并重新构建资料后，先查看安装计划：
+先按 [Aurabot 上游说明](https://github.com/aureth-labs/dsh-aurabot-qq)安装 DSH、Aurabot 和 OneBot v11 网关，并完成本人账号登录与必要协议确认。
+
+人物资料审计完成、账号配置一致后，先查看安装计划：
 
 ```sh
 node scripts/install-aurabot.mjs --project project.json
 ```
 
-计划会说明切换人格、关闭发送、关闭内置动作、使用纯聊天权限及备份配置。确认符合需求后应用：
+确认计划后应用：
 
 ```sh
 node scripts/install-aurabot.mjs --project project.json --apply
 ```
 
-关闭DSH后安装、再重启DSH最直接；若需更新正在运行的本机DSH，可额外加 `--reload`。安装器只允许回环地址，完整暂存并切换资料包，避免人物身份与私人记忆混装。仅支持一个活动的 `wechat-persona` 扩展；不同人格的新对话记忆按人格ID分开。
+安装器会备份配置，暂存完整人物资料再切换，并关闭发送与内置动作。重启 DSH 后，在面板核对人物、账号和试运行结果，再按需要恢复在线设置。支持一个活动的 `wechat-persona` 扩展，私人历史只提供给指定用户的私聊。
 
-在Aurabot面板确认身份和试运行结果，再按自己的授权范围启用聊天。**模型服务授权不等于QQ发送授权。**
+`/人设记住 事实` 可保存用户明确提供的新事实，与原型历史分开存储。
 
-希望同时增强Aurabot本体的对话记忆时，参见 [核心补丁说明](docs/aurabot-core.md)。人物扩展可以单独使用；本体补丁有明确的上游版本要求，需要重新加载核心。
+### 同时增强 Aurabot 核心
 
-## 作为skill使用
+原版 Aurabot 可以使用人物扩展；配套 [记忆增强分支](https://github.com/Accelerate11/dsh-aurabot-qq-memory/tree/persona-memory)还会在聊天中枢保留原话、提供多轮检索线索，并加强事实版本与聊天范围处理。
 
-[skills/wechat-persona/SKILL.md](skills/wechat-persona/SKILL.md)包含工作流与约束。提取脚本可独立随技能使用；JSONL便捷入口、本地试聊和Aurabot安装使用本仓库源码。保留已有同名私人skill，避免未经备份覆盖。
+核心安装工具默认只核对包版本、文件哈希并输出计划；显式应用时提供备份与失败回滚。支持的基线和完整命令见 [核心安装说明](docs/aurabot-core.md)。安装新版核心需要重新加载宿主，人物扩展热重载不能替代这一步。
 
-## 测试与发布检查
+加载后可在本机接口 `/aurabot/api/ext/wechat-persona/status` 核对 `conversationArchive: "aurabot_core"`，并确认 `conversationContext.enabled` 已开启。
+
+## 评估与开发
 
 ```sh
 python -B -m unittest discover -s tests -p "test_*.py"
@@ -151,14 +184,21 @@ node --test tests/runtime.test.mjs
 python scripts/check_public.py
 ```
 
-最后一条检查Git已跟踪/暂存文件；它拒绝运行数据、数据库、非演示账号和常见凭证格式，并只报告位置，不回显密钥。它是辅助检查，不能发现所有隐私。提交前仍应执行 `git diff --cached` 人工检查。
+发布检查读取 Git 暂存区，检查运行数据、账号、路径与常见凭证格式，只报告位置而不回显密钥。它是辅助检查，提交前仍需检查 `git diff --cached`。
 
-CI配置包含Windows/Linux、Python 3.12/3.13、Node.js 24；远程CI结果需在推送后确认。测试与演示不需要API密钥或真实微信数据。
+预留会话的检索与续写对照：
 
-可用 `python scripts/evaluate.py --project project.json --cases 6 --baseline-ref v0.1.0` 检查预留会话的检索隔离（需本地存在对应旧版tag，也可指定旧提交）；加 `--generate` 才会调用已获授权的模型，生成旧版/新版续写并进行标签置换后的自动评审。报告保存在私人 `data/` 下，不写入真实聊天记忆。自动评审样本少且有偏差，不能替代熟悉原型的人的盲评。
+```sh
+python scripts/evaluate.py --project project.json --cases 6 --baseline-ref v0.1.0
+```
 
-参见 [PRIVACY.md](PRIVACY.md)、[SECURITY.md](SECURITY.md) 和 [CONTRIBUTING.md](CONTRIBUTING.md)。
+本地须存在对应旧 tag，也可指定旧提交。默认只检索；加 `--generate` 才调用已授权模型生成两版续写并进行标签置换后的自动评审。报告保存在私人 `data/` 中，不写入真实对话记忆。自动评审不能替代熟悉原型的人的盲评，也不等于已证明真人相似度。
 
-## 许可证与来源
+作为 Codex skill 使用时，参见 [SKILL.md](skills/wechat-persona/SKILL.md)。提取脚本可以随技能使用；本地试聊和 QQ 接入需要本仓库的运行代码。
 
-代码采用 [Apache-2.0](LICENSE)。读取实现的参考与改动说明见 [NOTICE](NOTICE)；Aurabot作为外部MIT依赖，其许可证副本在 [third_party/Aurabot-MIT.txt](third_party/Aurabot-MIT.txt)。代码许可证不包含任何聊天记录、人物肖像、声音或身份资料的使用授权。
+## 文档与许可
+
+- [研究依据](docs/research.md) · [Aurabot 核心安装](docs/aurabot-core.md)
+- [隐私说明](PRIVACY.md) · [安全问题](SECURITY.md) · [贡献指南](CONTRIBUTING.md)
+
+通用代码采用 [Apache-2.0](LICENSE)；来源与改动说明见 [NOTICE](NOTICE)。共享的对话索引引擎源文件标注 MIT 许可，Aurabot 上游的 MIT 许可副本见 [third_party/Aurabot-MIT.txt](third_party/Aurabot-MIT.txt)。代码许可不包含任何人的聊天记录、身份、肖像或声音使用权。
